@@ -1,96 +1,23 @@
-<!-- <!DOCTYPE html>
-<html>
-<body>
-<video id="localVideo" autoplay playsinline></video>
-
-<script>
-async function start() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    document.getElementById('localVideo').srcObject = stream;
-  } catch (err) {
-    console.error("Erreur caméra/micro:", err);
-  }
-}
-
-start();
-</script>
-</body>
-</html> -->
-
-
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
-  <meta charset="utf-8">
-  <title>WebRTC manuel</title>
+    <meta charset="UTF-8" />
+    <title>WebRTC Chat P2P</title>
 </head>
 <body>
-  <h2>Connexion WebRTC (manuel Offer/Answer)</h2>
+    <h2>Mini WebRTC Chat</h2>
 
-  <!-- vidéo du micro local pour debug -->
-  <video id="local" autoplay muted playsinline width="250" style="border:1px solid #aaa"></video>
-  <video id="remote" autoplay playsinline width="250" style="border:1px solid #aaa"></video>
+    <button id="start">Connecter</button>
 
-  <h3>Votre SDP</h3>
-  <textarea id="localSDP" cols="80" rows="8"></textarea>
-  <br>
-  <button id="btnOffer">Créer Offer</button>
-  <button id="btnAnswer">Créer Answer</button>
+    <div id="status"></div>
 
-  <h3>SDP reçu de l'autre</h3>
-  <textarea id="remoteSDP" cols="80" rows="8"></textarea>
-  <br>
-  <button id="btnSetRemote">Utiliser SDP reçu</button>
+    <div style="margin-top: 20px;">
+        <input id="msg" type="text" placeholder="Message..." />
+        <button id="send">Envoyer</button>
+    </div>
 
-<script>
-let pc;
-let localStream;
+    <div id="chat" style="margin-top: 20px; border:1px solid #aaa; padding:10px; width:300px; height:200px; overflow-y:auto;"></div>
 
-async function init() {
-  // 1) Capture micro/caméra
-  localStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
-  document.getElementById("local").srcObject = localStream;
-
-  // 2) PeerConnection
-  pc = new RTCPeerConnection();
-
-  // Envoi du stream local
-  localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-
-  // Réception du stream distant
-  pc.ontrack = e => document.getElementById("remote").srcObject = e.streams[0];
-
-  // Chaque candidate ICE doit être partagée manuellement
-  pc.onicecandidate = e => {
-    if(e.candidate){
-      console.log("ICE:", JSON.stringify(e.candidate));
-    }
-  }
-}
-
-init();
-
-// -------------------- OFFER --------------------
-btnOffer.onclick = async () => {
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  document.getElementById("localSDP").value = JSON.stringify(pc.localDescription);
-};
-
-// ------------------- ANSWER --------------------
-btnAnswer.onclick = async () => {
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-  document.getElementById("localSDP").value = JSON.stringify(pc.localDescription);
-};
-
-// ----------------- SET REMOTE ------------------
-btnSetRemote.onclick = async () => {
-  const text = document.getElementById("remoteSDP").value;
-  const desc = new RTCSessionDescription(JSON.parse(text));
-  await pc.setRemoteDescription(desc);
-};
-</script>
+    <script src="script.js"></script>
 </body>
 </html>
