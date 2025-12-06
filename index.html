@@ -32,6 +32,10 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
+db.enablePersistence({ synchronizeTabs: false }).catch((err) => {
+  console.warn("⚠️ Offline persistence désactivée :", err.code);
+});
+
     const pc = new RTCPeerConnection();
     let dataChannel;
     let callDoc = db.collection("calls").doc("demo");
