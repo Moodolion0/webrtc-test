@@ -1,23 +1,126 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
-    <meta charset="UTF-8" />
-    <title>WebRTC Chat P2P</title>
+  <meta charset="UTF-8" />
+  <title>WebRTC Firebase Test</title>
 </head>
 <body>
-    <h2>Mini WebRTC Chat</h2>
+  <h2>WebRTC Messaging</h2>
 
-    <button id="start">Connecter</button>
+  <button id="createOffer">📤 Créer l’appel</button>
+  <button id="answerCall">📥 Répondre à l’appel</button>
 
-    <div id="status"></div>
+  <br><br>
 
-    <div style="margin-top: 20px;">
-        <input id="msg" type="text" placeholder="Message..." />
-        <button id="send">Envoyer</button>
-    </div>
+  <textarea id="messages" cols="40" rows="10" readonly></textarea><br>
+  <input id="messageBox" placeholder="Message..." />
+  <button id="sendBtn" disabled>Envoyer</button>
 
-    <div id="chat" style="margin-top: 20px; border:1px solid #aaa; padding:10px; width:300px; height:200px; overflow-y:auto;"></div>
+  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore-compat.js"></script>
 
-    <script src="script.js"></script>
+  <script>
+    // 🔹 Mets ici ta config copiée depuis Firebase
+    const firebaseConfig = {
+  apiKey: "AIzaSyDJZUQSY8D7PgVSrnrCjeJRy98GDiTac84",
+  authDomain: "webrtc-test-7bd51.firebaseapp.com",
+  projectId: "webrtc-test-7bd51",
+  storageBucket: "webrtc-test-7bd51.firebasestorage.app",
+  messagingSenderId: "732591129920",
+  appId: "1:732591129920:web:d54162eb134b12349526a5"
+};
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const pc = new RTCPeerConnection();
+    let dataChannel;
+    let callDoc = db.collection("calls").doc("demo");
+    let offerCandidates = callDoc.collection("offerCandidates");
+    let answerCandidates = callDoc.collection("answerCandidates");
+
+    pc.onicecandidate = e => {
+      if (e.candidate) {
+        const target = dataChannel ? answerCandidates : offerCandidates;
+        target.add(e.candidate.toJSON());
+      }
+    };
+
+    pc.ondatachannel = e => {
+      dataChannel = e.channel;
+      setupChannel();
+    };
+
+    function setupChannel() {
+      dataChannel.onopen = () => {
+        document.getElementById("sendBtn").disabled = false;
+        log("📡 Canal ouvert !");
+      };
+      dataChannel.onmessage = e => log("⬅️ " + e.data);
+    }
+
+    function log(msg) {
+      document.getElementById("messages").value += msg + "\n";
+    }
+
+    document.getElementById("createOffer").onclick = async () => {
+      dataChannel = pc.createDataChannel("chat");
+      setupChannel();
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      const roomWithOffer = {
+        offer: { type: offer.type, sdp: offer.sdp }
+      };
+      await callDoc.set(roomWithOffer);
+
+      callDoc.onSnapshot(async snapshot => {
+        const data = snapshot.data();
+        if (!pc.currentRemoteDescription && data?.answer) {
+          await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+        }
+      });
+
+      answerCandidates.onSnapshot(snapshot => {
+        snapshot.docChanges().forEach(change => {
+          if (change.type === "added") {
+            pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+          }
+        });
+      });
+
+      log("📤 Offre envoyée !");
+    };
+
+    document.getElementById("answerCall").onclick = async () => {
+      const callData = (await callDoc.get()).data();
+      const offer = callData.offer;
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      const roomWithAnswer = {
+        answer: { type: answer.type, sdp: answer.sdp }
+      };
+      await callDoc.update(roomWithAnswer);
+
+      offerCandidates.onSnapshot(snapshot => {
+        snapshot.docChanges().forEach(change => {
+          if (change.type === "added") {
+            pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+          }
+        });
+      });
+
+      log("📥 Réponse envoyée !");
+    };
+
+    document.getElementById("sendBtn").onclick = () => {
+      const msg = document.getElementById("messageBox").value;
+      dataChannel.send(msg);
+      log("➡️ " + msg);
+    };
+  </script>
 </body>
 </html>
