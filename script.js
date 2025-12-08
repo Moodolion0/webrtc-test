@@ -1,3 +1,5 @@
+document.addEventListener("DOMContentLoaded", () => {
+
 const startBtn = document.getElementById("startCall");
 const answerBtn = document.getElementById("answerCall");
 const sendBtn = document.getElementById("sendBtn");
@@ -60,7 +62,7 @@ sendBtn.onclick = () => {
   msgBox.value = "";
 };
 
-
+});
 
 
 
@@ -382,5 +384,6 @@ sendBtn.onclick = () => {
 //   safeSend(msg);
 //   msgInput.value = "";
 // };
+
 
 
